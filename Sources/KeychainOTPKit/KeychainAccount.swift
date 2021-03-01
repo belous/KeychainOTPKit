@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct KeychainAccount: Hashable, Codable {
+public struct KeychainAccount: Hashable, Codable {
     let issuer: String
     let label: String
     let id: UUID

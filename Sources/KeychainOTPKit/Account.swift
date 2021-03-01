@@ -13,7 +13,7 @@ enum AccountError: Error {
 
 private let decoder = JSONDecoder()
 
-struct Account: Hashable, Codable {
+public struct Account: Hashable, Codable {
     let issuer: String
     let label: String
     let secret: Secret
