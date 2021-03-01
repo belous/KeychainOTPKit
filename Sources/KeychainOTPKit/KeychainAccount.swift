@@ -13,7 +13,7 @@ public struct KeychainAccount: Hashable, Codable {
     let id: UUID
 }
 
-extension KeychainAccount {
+public extension KeychainAccount {
     init(from account: Account) {
         self.init(issuer: account.issuer, label: account.label, id: account.id)
     }
