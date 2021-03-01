@@ -19,6 +19,14 @@ public struct Account: Hashable, Codable {
     let secret: Secret
     let id: UUID
     let persistentRef: PersistentRef
+
+    public init(issuer: String, label: String, secret: Secret, id: UUID, persistentRef: PersistentRef) {
+        self.issuer = issuer
+        self.label = label
+        self.secret = secret
+        self.id = id
+        self.persistentRef = persistentRef
+    }
 }
 
 extension Account {
