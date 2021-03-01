@@ -1,0 +1,16 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "OTPKit",
+        "repositoryURL": "https://github.com/belous/OTPKit.git",
+        "state": {
+          "branch": null,
+          "revision": "019477c1faf9836a81f249877496e4aa1fb1dfd2",
+          "version": "0.2.1"
+        }
+      }
+    ]
+  },
+  "version": 1
+}

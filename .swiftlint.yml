@@ -1,0 +1,99 @@
+disabled_rules: # rule identifiers to exclude from running
+  - class_delegate_protocol
+  - cyclomatic_complexity
+  - function_parameter_count
+  - identifier_name
+  - multiple_closures_with_trailing_closure
+  - nesting
+  - notification_center_detachment
+  - valid_ibinspectable
+  - vertical_parameter_alignment_on_call
+  - weak_delegate
+  - trailing_comma
+opt_in_rules: # some rules are only opt-in
+  - array_init
+  - closure_spacing
+  - contains_over_first_not_nil
+  - empty_count
+  - explicit_init
+  - fatal_error_message
+  - force_unwrapping
+  - implicit_return
+  - multiline_arguments
+  - overridden_super_call
+  - prohibited_super_call
+  - redundant_nil_coalescing
+  - type_name
+  - unneeded_parentheses_in_closure_argument
+
+# configurable rules can be customized from this configuration file
+# binary rules can set their severity level
+force_cast: warning # implicitly. Give warning only for force casting
+
+force_try:
+  severity: warning # explicitly. Give warning only for force try
+
+type_body_length:
+  - 500 # warning
+  - 700 # error
+
+file_length:
+  warning: 600
+  error: 1200
+
+large_tuple: # warn user when using 3 values in tuple, give error if there are 4
+   - 3
+   - 4
+
+# function_parameter_count:
+#   error: 6
+
+# warning_threshold: 5
+
+# naming rules can set warnings/errors for min_length and max_length
+# additionally they can set excluded names
+type_name:
+  min_length: 4 # only warning
+  max_length: # warning and error
+    warning: 30
+    error: 35
+  excluded: iPhone # excluded via string
+reporter: "xcode"
+
+# Rules editing
+
+line_length:
+  warning: 160
+  ignores_function_declarations: true
+  ignores_comments: true
+
+###
+
+custom_rules:
+  zero:
+    name: "Short .zero"
+    regex: '\(top: 0, left: 0, bottom: 0, right: 0\)'
+    message: "Please use short init `.zero`."
+    severity: error
+
+  marks_style:
+    name: "Marks"
+    regex: '// MARK: -?[a-zA-Z0-9]'
+    message: "Marks should follow the following structure: // MARK: - Comment."
+    severity: warning
+
+  unowned:
+    name: "Unowned"
+    regex: 'unowned'
+    message: "Please use `weak` instead. "
+    severity: error
+    match_kinds: keyword
+
+  cyrillic_strings:
+    name: "Cyrillic strings"
+    regex: '[а-яА-Я]+'
+    message: "Localize or translate"
+    severity: error
+    match_kinds:
+    - identifier
+    - string
