@@ -6,6 +6,7 @@ import PackageDescription
 let package = Package(
     name: "KeychainOTPKit",
     platforms: [
+        .macOS(.v10_15),
         .iOS(.v14)
     ],
     products: [
