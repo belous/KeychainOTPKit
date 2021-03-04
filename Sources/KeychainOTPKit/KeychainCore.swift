@@ -16,13 +16,14 @@ public typealias KeychainRawData = [String: Any]
 
 private typealias QueryDictionary = [String: Any]
 
-enum KeychainCoreError: Error {
-    case error
-    case noData
-    case notFound(name: String)
-}
-
 public final class KeychainCore {
+
+    public enum KeychainCoreError: Error {
+        case genericError
+        case noData
+        case notFound(name: String)
+    }
+
     private let keychainService: KeychainService
 
     public init(keychainService: KeychainService) {
@@ -45,11 +46,11 @@ public final class KeychainCore {
         case errSecSuccess:
             return .success(ref)
         default:
-            return .failure(KeychainCoreError.error)
+            return .failure(KeychainCoreError.genericError)
         }
     }
 
-    public func retriveRawData() -> Result<[KeychainRawData], Error> {
+    public func retriveRawData() -> Result<[KeychainRawData], KeychainCoreError> {
         let query: QueryDictionary = [
             kSecClass as String: kSecClassGenericPassword,
             kSecMatchLimit as String: kSecMatchLimitAll,
@@ -70,7 +71,7 @@ public final class KeychainCore {
         case errSecItemNotFound:
             return .failure(KeychainCoreError.notFound(name: keychainService))
         default:
-            return .failure(KeychainCoreError.error)
+            return .failure(KeychainCoreError.genericError)
         }
     }
 
@@ -93,7 +94,7 @@ public final class KeychainCore {
             }
             return .success(secretData)
         default:
-            return .failure(KeychainCoreError.error)
+            return .failure(KeychainCoreError.genericError)
         }
     }
 
@@ -107,7 +108,7 @@ public final class KeychainCore {
         case errSecSuccess, errSecItemNotFound:
             return .success(())
         default:
-            return .failure(KeychainCoreError.error)
+            return .failure(KeychainCoreError.genericError)
         }
     }
 }

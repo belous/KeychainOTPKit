@@ -1,32 +1,62 @@
 import Foundation
 
-enum AccountsError: Error {
-    case encodingError
-    case decodingError
-    case savingError
-    case removalError
-}
+struct KeychainCaretaker {
 
-public final class KeychainOTPKit {
+    enum KeychainCaretakerError: Error {
+        case retrivingError
+        case readingError
+        case creatingError
+        case removingError
+    }
+
+    private let keychain: KeychainCore
+
+    init(with keychain: KeychainCore) {
+        self.keychain = keychain
+    }
+
+    func retriveAccounts() -> Result<[Account], KeychainCaretakerError> {
+        let keychainRawAccounts = keychain.retriveRawData()
+        switch keychainRawAccounts {
+        case .success(let keychainRawData):
+            do {
+                let result: [Account] = try keychainRawData.map(extractAccount).map { item in
+                    switch item {
+                    case .success(let account):
+                        return account
+                    case .failure(let error):
+                        throw error
+                    }
+                }
+                return .success(result)
+            } catch {
+                return .failure(KeychainCaretakerError.retrivingError)
+            }
+        case .failure(let error):
+            switch error {
+            case .genericError, .noData:
+                return .failure(KeychainCaretakerError.retrivingError)
+            case .notFound:
+                return .success([])
+            }
+        }
+    }
+
+    private func extractAccount(from rawData: KeychainRawData) -> Result<Account, KeychainCaretakerError> {
+        if let userData = rawData[kSecAttrGeneric as String] as? UserData,
+           let secretData = rawData[kSecValueData as String] as? SecretData,
+           let persistentRef = rawData[kSecValuePersistentRef as String] as? PersistentRef,
+           // TODO: Moved decoding from Account to this Caretaker
+           let account = Account(userData: userData, secretData: secretData, persistentRef: persistentRef) {
+            return .success(account)
+        } else {
+            return .failure(KeychainCaretakerError.readingError)
+        }
+    }
 
     private let encoder = JSONEncoder()
 
-    private let keychain: KeychainCore
-    private var accounts: [UUID: Account] = [:]
-    var all: [UUID: Account] {
-        accounts
-    }
-
-    init(keychainService: KeychainService) {
-        self.keychain = KeychainCore(keychainService: keychainService)
-        retriveAccounts()
-    }
-
-    private func retriveAccounts() {
-        accounts = keychain.accounts
-    }
-
-    func addNewAccount(keychainAccount: KeychainAccount, secret: Secret) {
+    func addNewAccount(keychainAccount: KeychainAccount, secret: Secret) -> Result<Void, KeychainCaretakerError> {
         let keychainID = keychainAccount.id
         let keychainAccountEncoded = encoder.code(keychainAccount)
         let keychainSecretEncoded = encoder.code(secret)
@@ -36,44 +66,55 @@ public final class KeychainOTPKit {
             let result = keychain.save(userData: userData, uuid: keychainID, secretData: secretData)
             switch result {
             case .success:
-                retriveAccounts()
-            case .failure(let error):
-                print("\(AccountsError.savingError): \(error)")
+                return .success(())
+            case .failure:
+                return .failure(KeychainCaretakerError.creatingError)
             }
         case (_, _):
-            print(AccountsError.encodingError)
+            return .failure(KeychainCaretakerError.creatingError)
         }
     }
 
-    func remove(account: Account) {
+    func remove(account: Account) -> Result<Void, KeychainCaretakerError> {
         let result = keychain.remove(at: account.persistentRef)
         switch result {
         case .success:
-            retriveAccounts()
-        case .failure(let error):
-            print("\(AccountsError.removalError): \(error)")
+            return .success(())
+        case .failure:
+            return .failure(KeychainCaretakerError.removingError)
         }
     }
+
 }
 
-fileprivate extension KeychainCore {
-    var accounts: [UUID: Account] {
-        switch retriveRawData() {
-        case .success(let accounts):
-            return accounts.reduce([UUID: Account]()) { result, keychainData -> [UUID: Account] in
-                var result = result
-                if let userData = keychainData[kSecAttrGeneric as String] as? UserData,
-                   let secretData = keychainData[kSecValueData as String] as? SecretData,
-                   let persistentRef = keychainData[kSecValuePersistentRef as String] as? PersistentRef,
-                   let account = Account(userData: userData, secretData: secretData, persistentRef: persistentRef) {
-                    result[account.id] = account
-                }
+enum KeychainOTPKitError: Error {
+    case encodingError
+    case decodingError
+    case savingError
+    case removalError
+}
+
+public final class KeychainOTPKit {
+
+    private let keychainCaretaker: KeychainCaretaker
+
+    var accounts: [Account] {
+        get {
+            switch keychainCaretaker.retriveAccounts() {
+            case .success(let result):
                 return result
+            case .failure:
+                return []
             }
-        case .failure(let error):
-            print("Keychain.retrieveAccounts() error: \(error)")
-            return [UUID: Account]()
         }
+        // TODO: save the difference
+//        set {
+//            let difference = accounts.difference(from: newValue)
+//        }
+    }
+
+    init(keychainService: KeychainService) {
+        self.keychainCaretaker = KeychainCaretaker(with: KeychainCore(keychainService: keychainService))
     }
 }
 
@@ -84,7 +125,7 @@ fileprivate extension JSONEncoder {
             return .success(data)
         } catch let error {
             print("Encode failed: `\(error)`")
-            return .failure(AccountsError.encodingError)
+            return .failure(KeychainOTPKitError.encodingError)
         }
     }
 }
