@@ -29,7 +29,7 @@ public struct Secret: Codable, Equatable, Hashable {
 
 extension Secret: OTPProvidable {}
 
-extension OTPProvidable {
+public extension OTPProvidable {
     var currentOTP: String {
         getOTP(for: Date())
     }

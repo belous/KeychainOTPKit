@@ -7,7 +7,7 @@ enum AccountsError: Error {
     case removalError
 }
 
-class KeychainOTPKit {
+public final class KeychainOTPKit {
 
     private let encoder = JSONEncoder()
 
