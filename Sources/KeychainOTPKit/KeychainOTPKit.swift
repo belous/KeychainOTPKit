@@ -1,8 +1,8 @@
 import Foundation
 
-struct KeychainCaretaker {
+public struct KeychainOTPKit {
 
-    enum KeychainCaretakerError: Error {
+    public enum KeychainCaretakerError: Error {
         case retrivingError
         case readingError
         case creatingError
@@ -11,11 +11,11 @@ struct KeychainCaretaker {
 
     private let keychain: KeychainCore
 
-    init(with keychain: KeychainCore) {
+    public init(with keychain: KeychainCore) {
         self.keychain = keychain
     }
 
-    func retriveAccounts() -> Result<[Account], KeychainCaretakerError> {
+    public func retriveAccounts() -> Result<[Account], KeychainCaretakerError> {
         let keychainRawAccounts = keychain.retriveRawData()
         switch keychainRawAccounts {
         case .success(let keychainRawData):
@@ -56,7 +56,7 @@ struct KeychainCaretaker {
 
     private let encoder = JSONEncoder()
 
-    func addNewAccount(keychainAccount: KeychainAccount, secret: Secret) -> Result<Void, KeychainCaretakerError> {
+    public func addNewAccount(keychainAccount: KeychainAccount, secret: Secret) -> Result<Void, KeychainCaretakerError> {
         let keychainID = keychainAccount.id
         let keychainAccountEncoded = encoder.code(keychainAccount)
         let keychainSecretEncoded = encoder.code(secret)
@@ -75,7 +75,7 @@ struct KeychainCaretaker {
         }
     }
 
-    func remove(account: Account) -> Result<Void, KeychainCaretakerError> {
+    public func remove(account: Account) -> Result<Void, KeychainCaretakerError> {
         let result = keychain.remove(at: account.persistentRef)
         switch result {
         case .success:
@@ -92,30 +92,6 @@ enum KeychainOTPKitError: Error {
     case decodingError
     case savingError
     case removalError
-}
-
-public final class KeychainOTPKit {
-
-    private let keychainCaretaker: KeychainCaretaker
-
-    var accounts: [Account] {
-        get {
-            switch keychainCaretaker.retriveAccounts() {
-            case .success(let result):
-                return result
-            case .failure:
-                return []
-            }
-        }
-        // TODO: save the difference
-//        set {
-//            let difference = accounts.difference(from: newValue)
-//        }
-    }
-
-    init(keychainService: KeychainService) {
-        self.keychainCaretaker = KeychainCaretaker(with: KeychainCore(keychainService: keychainService))
-    }
 }
 
 fileprivate extension JSONEncoder {
