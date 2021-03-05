@@ -9,9 +9,9 @@ public struct KeychainOTPKit {
         case removingError
     }
 
-    private let keychain: KeychainCore
+    private let keychain: Storable
 
-    public init(with keychain: KeychainCore) {
+    public init(with keychain: Storable) {
         self.keychain = keychain
     }
 
@@ -45,16 +45,22 @@ public struct KeychainOTPKit {
     private func extractAccount(from rawData: KeychainRawData) -> Result<Account, KeychainCaretakerError> {
         if let userData = rawData[kSecAttrGeneric as String] as? UserData,
            let secretData = rawData[kSecValueData as String] as? SecretData,
-           let persistentRef = rawData[kSecValuePersistentRef as String] as? PersistentRef,
-           // TODO: Moved decoding from Account to this Caretaker
-           let account = Account(userData: userData, secretData: secretData, persistentRef: persistentRef) {
-            return .success(account)
+           let persistentRef = rawData[kSecValuePersistentRef as String] as? PersistentRef {
+            let userDataDecoded = decoder.decode(userData, KeychainAccount.self)
+            let secretDataDecoded = decoder.decode(secretData, Secret.self)
+            switch (userDataDecoded, secretDataDecoded) {
+            case (.success(let keychainAccount), .success(let secret)):
+                return .success(Account(from: keychainAccount, secret: secret, persistentRef: persistentRef))
+            case (_, _):
+                return .failure(KeychainCaretakerError.readingError)
+            }
         } else {
             return .failure(KeychainCaretakerError.readingError)
         }
     }
 
     private let encoder = JSONEncoder()
+    private let decoder = JSONDecoder()
 
     public func addNewAccount(keychainAccount: KeychainAccount, secret: Secret) -> Result<Void, KeychainCaretakerError> {
         let keychainID = keychainAccount.id
@@ -103,5 +109,23 @@ fileprivate extension JSONEncoder {
             print("Encode failed: `\(error)`")
             return .failure(KeychainOTPKitError.encodingError)
         }
+    }
+}
+
+fileprivate extension JSONDecoder {
+    func decode<T>(_ data: Data, _ type: T.Type) -> Result<T, Error> where T: Decodable {
+        do {
+            let result = try self.decode(type.self, from: data)
+            return .success(result)
+        } catch let error {
+            print("Decode failed: `\(error)`")
+            return .failure(KeychainOTPKitError.decodingError)
+        }
+    }
+}
+
+extension Account {
+    init(from keychainAccount: KeychainAccount, secret: Secret, persistentRef: PersistentRef) {
+        self.init(issuer: keychainAccount.issuer, label: keychainAccount.label, secret: secret, id: keychainAccount.id, persistentRef: persistentRef)
     }
 }

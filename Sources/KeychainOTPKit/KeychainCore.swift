@@ -8,21 +8,10 @@
 
 import Foundation
 
-public typealias UserData = Data
-public typealias SecretData = Data
-public typealias PersistentRef = Data
 public typealias KeychainService = String
-public typealias KeychainRawData = [String: Any]
-
 private typealias QueryDictionary = [String: Any]
 
-public final class KeychainCore {
-
-    public enum KeychainCoreError: Error {
-        case genericError
-        case noData
-        case notFound(name: String)
-    }
+public final class KeychainCore: Storable {
 
     private let keychainService: KeychainService
 
@@ -30,7 +19,7 @@ public final class KeychainCore {
         self.keychainService = keychainService
     }
 
-    public func save(userData: UserData, uuid: UUID, secretData: SecretData) -> Result<CFTypeRef?, Error> {
+    public func save(userData: UserData, uuid: UUID, secretData: SecretData) -> Result<Void, StorableError> {
         let query: QueryDictionary = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: uuid.uuidString,
@@ -44,13 +33,13 @@ public final class KeychainCore {
         var ref: CFTypeRef?
         switch SecItemAdd(query as CFDictionary, &ref) {
         case errSecSuccess:
-            return .success(ref)
+            return .success(())
         default:
-            return .failure(KeychainCoreError.genericError)
+            return .failure(StorableError.genericError)
         }
     }
 
-    public func retriveRawData() -> Result<[KeychainRawData], KeychainCoreError> {
+    public func retriveRawData() -> Result<[StorableRawData], StorableError> {
         let query: QueryDictionary = [
             kSecClass as String: kSecClassGenericPassword,
             kSecMatchLimit as String: kSecMatchLimitAll,
@@ -65,17 +54,17 @@ public final class KeychainCore {
         switch SecItemCopyMatching(query as CFDictionary, &ref) {
         case errSecSuccess:
             guard let data = ref as? [KeychainRawData] else {
-                return .failure(KeychainCoreError.noData)
+                return .failure(StorableError.noData)
             }
             return .success(data)
         case errSecItemNotFound:
-            return .failure(KeychainCoreError.notFound(name: keychainService))
+            return .failure(StorableError.notFound(name: keychainService))
         default:
-            return .failure(KeychainCoreError.genericError)
+            return .failure(StorableError.genericError)
         }
     }
 
-    public func retriveSecret(at persistentRef: PersistentRef) -> Result<SecretData, Error> {
+    public func retriveSecret(at persistentRef: PersistentRef) -> Result<SecretData, StorableError> {
         let query: QueryDictionary = [
             kSecClass as String: kSecClassGenericPassword,
             kSecMatchLimit as String: kSecMatchLimitOne,
@@ -90,15 +79,15 @@ public final class KeychainCore {
         case errSecSuccess:
             guard let existingItem = item as? KeychainRawData,
                 let secretData = existingItem[kSecValueData as String] as? SecretData else {
-                    return .failure(KeychainCoreError.noData)
+                    return .failure(StorableError.noData)
             }
             return .success(secretData)
         default:
-            return .failure(KeychainCoreError.genericError)
+            return .failure(StorableError.genericError)
         }
     }
 
-    public func remove(at persistentRef: PersistentRef) -> Result<Void, Error> {
+    public func remove(at persistentRef: PersistentRef) -> Result<Void, StorableError> {
         let query: QueryDictionary = [
             kSecClass as String: kSecClassGenericPassword,
             kSecValuePersistentRef as String: persistentRef
@@ -108,7 +97,7 @@ public final class KeychainCore {
         case errSecSuccess, errSecItemNotFound:
             return .success(())
         default:
-            return .failure(KeychainCoreError.genericError)
+            return .failure(StorableError.genericError)
         }
     }
 }
