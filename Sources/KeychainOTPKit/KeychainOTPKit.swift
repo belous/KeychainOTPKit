@@ -34,7 +34,7 @@ public struct KeychainOTPKit {
             }
         case .failure(let error):
             switch error {
-            case .genericError, .noData:
+            case .genericError, .noData, .readingError:
                 return .failure(KeychainCaretakerError.retrivingError)
             case .notFound:
                 return .success([])
@@ -42,21 +42,16 @@ public struct KeychainOTPKit {
         }
     }
 
-    private func extractAccount(from rawData: KeychainRawData) -> Result<Account, KeychainCaretakerError> {
-        if let userData = rawData[kSecAttrGeneric as String] as? UserData,
-           let secretData = rawData[kSecValueData as String] as? SecretData,
-           let persistentRef = rawData[kSecValuePersistentRef as String] as? PersistentRef {
-            let userDataDecoded = decoder.decode(userData, KeychainAccount.self)
-            let secretDataDecoded = decoder.decode(secretData, Secret.self)
-            switch (userDataDecoded, secretDataDecoded) {
-            case (.success(let keychainAccount), .success(let secret)):
-                return .success(Account(from: keychainAccount, secret: secret, persistentRef: persistentRef))
-            case (_, _):
-                return .failure(KeychainCaretakerError.readingError)
-            }
-        } else {
+    private func extractAccount(from storableData: StorableData) -> Result<Account, KeychainCaretakerError> {
+        let userDataDecoded = decoder.decode(storableData.userData, KeychainAccount.self)
+        let secretDataDecoded = decoder.decode(storableData.secretData, Secret.self)
+        switch (userDataDecoded, secretDataDecoded) {
+        case (.success(let keychainAccount), .success(let secret)):
+            return .success(Account(from: keychainAccount, secret: secret, persistentRef: storableData.persistentRef))
+        case (_, _):
             return .failure(KeychainCaretakerError.readingError)
         }
+
     }
 
     private let encoder = JSONEncoder()

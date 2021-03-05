@@ -39,7 +39,7 @@ public final class KeychainCore: Storable {
         }
     }
 
-    public func retriveRawData() -> Result<[StorableRawData], StorableError> {
+    public func retriveRawData() -> Result<[StorableData], StorableError> {
         let query: QueryDictionary = [
             kSecClass as String: kSecClassGenericPassword,
             kSecMatchLimit as String: kSecMatchLimitAll,
@@ -53,14 +53,36 @@ public final class KeychainCore: Storable {
 
         switch SecItemCopyMatching(query as CFDictionary, &ref) {
         case errSecSuccess:
-            guard let data = ref as? [KeychainRawData] else {
+            guard let data = ref as? [StorableRawData] else {
                 return .failure(StorableError.noData)
             }
-            return .success(data)
+            do {
+                let result: [StorableData] = try data.map(extractAccount).map { item in
+                    switch item {
+                    case .success(let account):
+                        return account
+                    case .failure(let error):
+                        throw error
+                    }
+                }
+                return .success(result)
+            } catch {
+                return .failure(StorableError.readingError)
+            }
         case errSecItemNotFound:
             return .failure(StorableError.notFound(name: keychainService))
         default:
             return .failure(StorableError.genericError)
+        }
+    }
+
+    public func extractAccount(from rawData: StorableRawData) -> Result<StorableData, StorableError> {
+        if let userData = rawData[kSecAttrGeneric as String] as? UserData,
+           let secretData = rawData[kSecValueData as String] as? SecretData,
+           let persistentRef = rawData[kSecValuePersistentRef as String] as? PersistentRef {
+            return .success(StorableData(userData: userData, secretData: secretData, persistentRef: persistentRef))
+        } else {
+            return .failure(StorableError.readingError)
         }
     }
 
@@ -77,7 +99,7 @@ public final class KeychainCore: Storable {
 
         switch SecItemCopyMatching(query as CFDictionary, &item) {
         case errSecSuccess:
-            guard let existingItem = item as? KeychainRawData,
+            guard let existingItem = item as? StorableRawData,
                 let secretData = existingItem[kSecValueData as String] as? SecretData else {
                     return .failure(StorableError.noData)
             }
