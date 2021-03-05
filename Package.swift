@@ -15,7 +15,7 @@ let package = Package(
             targets: ["KeychainOTPKit"]),
     ],
     dependencies: [
-         .package(url: "https://github.com/belous/OTPKit.git", from: "0.2.1"),
+         .package(url: "https://github.com/belous/OTPKit.git", from: "0.3.0"),
     ],
     targets: [
         .target(

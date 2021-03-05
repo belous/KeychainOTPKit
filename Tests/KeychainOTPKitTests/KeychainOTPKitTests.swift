@@ -3,7 +3,7 @@ import XCTest
 
 final class KeychainOTPKitTests: XCTestCase {
     func testExample() {
-        let keychainOTPKit = KeychainOTPKit(keychainService: "keychainService")
+        let keychainOTPKit = KeychainOTPKit(with: KeychainCore(keychainService: "keychainService"))
         XCTAssertNotNil(keychainOTPKit)
     }
 
