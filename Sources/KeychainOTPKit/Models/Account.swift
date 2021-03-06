@@ -22,3 +22,9 @@ public struct Account: Hashable, Codable {
         self.persistentRef = persistentRef
     }
 }
+
+extension Account {
+    init(from keychainAccount: KeychainAccount, secret: Secret, persistentRef: PersistentRef) {
+        self.init(issuer: keychainAccount.issuer, label: keychainAccount.label, secret: secret, id: keychainAccount.id, persistentRef: persistentRef)
+    }
+}
