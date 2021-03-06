@@ -1,15 +1,17 @@
 import Foundation
 
+public enum KeychainCaretakerError: Error {
+    case retrivingError
+    case creatingError
+    case removingError
+    case encodingError
+    case decodingError
+}
+
 public struct KeychainOTPKit {
-
-    public enum KeychainCaretakerError: Error {
-        case retrivingError
-        case readingError
-        case creatingError
-        case removingError
-    }
-
     private let keychain: Storable
+    private let encoder = JSONEncoder()
+    private let decoder = JSONDecoder()
 
     public init(with keychain: Storable) {
         self.keychain = keychain
@@ -49,13 +51,9 @@ public struct KeychainOTPKit {
         case (.success(let keychainAccount), .success(let secret)):
             return .success(Account(from: keychainAccount, secret: secret, persistentRef: storableData.persistentRef))
         case (_, _):
-            return .failure(KeychainCaretakerError.readingError)
+            return .failure(KeychainCaretakerError.retrivingError)
         }
-
     }
-
-    private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
 
     public func addNewAccount(keychainAccount: KeychainAccount, secret: Secret) -> Result<Void, KeychainCaretakerError> {
         let keychainID = keychainAccount.id
@@ -88,13 +86,6 @@ public struct KeychainOTPKit {
 
 }
 
-enum KeychainOTPKitError: Error {
-    case encodingError
-    case decodingError
-    case savingError
-    case removalError
-}
-
 fileprivate extension JSONEncoder {
     func code<T>(_ value: T) -> Result<Data, Error> where T: Encodable {
         do {
@@ -102,7 +93,7 @@ fileprivate extension JSONEncoder {
             return .success(data)
         } catch let error {
             print("Encode failed: `\(error)`")
-            return .failure(KeychainOTPKitError.encodingError)
+            return .failure(KeychainCaretakerError.encodingError)
         }
     }
 }
@@ -114,13 +105,7 @@ fileprivate extension JSONDecoder {
             return .success(result)
         } catch let error {
             print("Decode failed: `\(error)`")
-            return .failure(KeychainOTPKitError.decodingError)
+            return .failure(KeychainCaretakerError.decodingError)
         }
-    }
-}
-
-extension Account {
-    init(from keychainAccount: KeychainAccount, secret: Secret, persistentRef: PersistentRef) {
-        self.init(issuer: keychainAccount.issuer, label: keychainAccount.label, secret: secret, id: keychainAccount.id, persistentRef: persistentRef)
     }
 }
